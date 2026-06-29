@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MX1 · Charts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0A1326; --panel:#101D38; --panel-2:#142544;
+    --line:rgba(90,190,220,.12); --line-strong:rgba(90,200,230,.30);
+    --text:#EAF1F8; --muted:#7E92B4; --faint:#4E5F84;
+    --cyan:#34D2E6; --cyan-dim:#136a80;
+    --up:#45C48A; --up-dim:#1f6b4c;
+    --down:#F05568; --down-dim:#8a2733;
+    --gold:#D8A645;
+    --mono:'IBM Plex Mono',ui-monospace,monospace;
+    --sans:'Space Grotesk',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    font-family:var(--sans); color:var(--text);
+    background:
+      radial-gradient(820px 480px at 80% -10%,rgba(52,210,230,.10),transparent 60%),
+      radial-gradient(640px 460px at 8% 0%,rgba(52,210,230,.06),transparent 55%),
+      var(--ink);
+    min-height:100vh; padding:38px clamp(16px,4vw,40px);
+    -webkit-font-smoothing:antialiased;
+  }
+  .grid{max-width:1240px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+  .card{
+    position:relative;border:1px solid var(--line);
+    background:linear-gradient(180deg,var(--panel-2),var(--panel));
+    border-radius:18px;padding:24px;overflow:hidden;
+  }
+  .card::before{content:"";position:absolute;inset:0 0 auto 0;height:1px;
+    background:linear-gradient(90deg,transparent,var(--line-strong),transparent);}
+  .head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+  .head h3{font-size:15px;font-weight:600;}
+  .head .tag{font-family:var(--mono);font-size:10px;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--faint);border:1px solid var(--line);
+    padding:4px 9px;border-radius:6px;}
+
+  /* speedometer */
+  .speedo{display:flex;flex-direction:column;align-items:center;}
+  .gwrap{position:relative;width:280px;max-width:100%;height:240px;}
+  .gwrap svg{display:block;overflow:visible;width:100%;}
+  #needleG{transform-origin:150px 150px;}
+  .readout{position:absolute;left:0;right:0;top:158px;text-align:center;}
+  .readout .num{font-family:var(--mono);font-size:42px;font-weight:600;line-height:1;
+    color:var(--cyan);text-shadow:0 0 24px rgba(52,210,230,.5);}
+  .readout .num small{font-size:22px;}
+  .readout .cap{font-family:var(--mono);font-size:10px;letter-spacing:.2em;
+    text-transform:uppercase;color:var(--muted);margin-top:2px;}
+  .grec{display:flex;gap:14px;margin-top:6px;font-family:var(--mono);font-size:13px;flex-wrap:wrap;justify-content:center;}
+  .grec .w{color:var(--up);} .grec .l{color:var(--down);} .grec b{font-weight:600;}
+
+  /* concentration ring */
+  .ring-stage{display:flex;flex-direction:column;align-items:center;padding-top:8px;}
+  .ring{position:relative;width:230px;max-width:100%;height:230px;display:grid;place-items:center;}
+  .ring .sweep{
+    position:absolute;inset:14px;border-radius:50%;
+    background:conic-gradient(from 0deg,transparent 0deg,rgba(52,210,230,0) 200deg,
+      rgba(52,210,230,.7) 315deg,rgba(52,210,230,.98) 350deg,transparent 360deg);
+    -webkit-mask:radial-gradient(circle, transparent 56%, #000 57%, #000 78%, transparent 79%);
+            mask:radial-gradient(circle, transparent 56%, #000 57%, #000 78%, transparent 79%);
+    animation:spin 4.5s linear infinite;
+    filter:drop-shadow(0 0 12px rgba(52,210,230,.55));
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .ring .baseRing{position:absolute;inset:14px;border-radius:50%;border:18px solid rgba(52,210,230,.13);}
+  .ring .core{position:relative;z-index:2;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:2px;text-align:center;}
+  .ring .btc{font-family:var(--mono);font-weight:600;font-size:34px;color:var(--cyan);
+    text-shadow:0 0 20px rgba(52,210,230,.55);}
+  .ring .pair{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.05em;}
+  .orbit-dots{position:absolute;inset:0;}
+  .orbit-dots .od{position:absolute;width:9px;height:9px;border-radius:50%;
+    background:var(--faint);transform:translate(-50%,-50%);}
+  .orbit-dots .od.live{background:var(--cyan);box-shadow:0 0 12px var(--cyan),0 0 4px #fff;}
+  .ringfoot{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:16px;letter-spacing:.04em;text-align:center;}
+  .ringfoot b{color:var(--text);font-weight:500;}
+
+  /* pnl bars */
+  .pnl-svg{width:100%;height:240px;overflow:visible;}
+  .axisnote{font-family:var(--mono);font-size:10px;letter-spacing:.04em;color:var(--faint);
+    margin-top:6px;text-align:center;}
+
+  @media(max-width:980px){.grid{grid-template-columns:1fr;}.gwrap,.ring{margin:0 auto;}}
+  @media(prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important;}}
+</style>
+</head>
+<body>
+<div class="grid">
+
+  <!-- ========= 270° SPEEDOMETER ========= -->
+  <div class="card">
+    <div class="head"><h3>Trade Outcomes</h3><span class="tag">Win Rate</span></div>
+    <div class="speedo">
+      <div class="gwrap">
+        <svg width="280" height="240" viewBox="0 0 300 250">
+          <defs>
+            <linearGradient id="arcG" x1="0" y1="1" x2="1" y2="0">
+              <stop offset="0" stop-color="#176479"/>
+              <stop offset=".5" stop-color="#22A7C4"/>
+              <stop offset="1" stop-color="#3FE0F0"/>
+            </linearGradient>
+            <filter id="fGlow" x="-60%" y="-60%" width="220%" height="220%">
+              <feGaussianBlur stdDeviation="4" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <path id="track" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="18" stroke-linecap="round"/>
+          <path id="fill" fill="none" stroke="url(#arcG)" stroke-width="18" stroke-linecap="round" filter="url(#fGlow)"/>
+          <g id="ticks"></g>
+          <g id="needleG">
+            <line x1="150" y1="150" x2="150" y2="64" stroke="#EAF1F8" stroke-width="3" stroke-linecap="round"/>
+            <circle cx="150" cy="64" r="4.5" fill="#3FE0F0" filter="url(#fGlow)"/>
+          </g>
+          <circle cx="150" cy="150" r="8" fill="#142544" stroke="#34D2E6" stroke-width="2.5"/>
+        </svg>
+        <div class="readout">
+          <div class="num"><span id="num">0.0</span><small>%</small></div>
+          <div class="cap">Win Rate</div>
+        </div>
+      </div>
+      <div class="grec"><span class="w"><b>8</b>W</span><span class="l"><b>7</b>L</span>
+        <span style="color:var(--muted)">·</span><span style="color:var(--cyan)">+3.3% edge</span></div>
+    </div>
+  </div>
+
+  <!-- ========= ASSET ALLOCATION CONCENTRATION RING ========= -->
+  <div class="card">
+    <div class="head"><h3>Asset Allocation</h3><span class="tag">1 / 8 active</span></div>
+    <div class="ring-stage">
+      <div class="ring">
+        <div class="baseRing"></div>
+        <div class="sweep"></div>
+        <div class="orbit-dots" id="orbitDots"></div>
+        <div class="core">
+          <div class="btc">BTC</div>
+          <div class="pair">/USDT/SWAP</div>
+          <div class="pair" style="color:var(--cyan);font-size:13px;margin-top:4px">100.0%</div>
+        </div>
+      </div>
+      <div class="ringfoot">Full conviction · <b>1</b> of <b>8</b> coins deployed</div>
+    </div>
+  </div>
+
+  <!-- ========= PnL BARS WITH LABELS ========= -->
+  <div class="card">
+    <div class="head"><h3>Daily Net PnL</h3><span class="tag">5d · USD</span></div>
+    <svg class="pnl-svg" id="pnl" viewBox="0 0 420 240" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="bUp" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#45C48A"/><stop offset="1" stop-color="#1f6b4c"/>
+        </linearGradient>
+        <linearGradient id="bDown" x1="0" y1="1" x2="0" y2="0">
+          <stop offset="0" stop-color="#F05568"/><stop offset="1" stop-color="#8a2733"/>
+        </linearGradient>
+      </defs>
+      <line x1="0" y1="120" x2="420" y2="120" stroke="rgba(90,200,230,.18)" stroke-width="1"/>
+      <g id="barsG"></g>
+    </svg>
+    <div class="axisnote">Net result per day · zero line centered</div>
+  </div>
+
+</div>
+
+<script>
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---- speedometer ---- */
+(function(){
+  const cx=150,cy=150,R=104, START=225, SWEEP=270, pct=53.3;
+  function polar(r,deg){const a=(deg-90)*Math.PI/180;return [cx+r*Math.cos(a),cy+r*Math.sin(a)];}
+  function arc(r,s,e){const[x1,y1]=polar(r,s),[x2,y2]=polar(r,e);
+    const large=(e-s)>180?1:0;return `M${x1},${y1} A${r},${r} 0 ${large} 1 ${x2},${y2}`;}
+  document.getElementById('track').setAttribute('d',arc(R,START,START+SWEEP));
+  const valDeg=START+SWEEP*pct/100;
+  const fill=document.getElementById('fill');
+  fill.setAttribute('d',arc(R,START,valDeg));
+  const tg=document.getElementById('ticks');
+  [0,25,50,75,100].forEach(t=>{
+    const deg=START+SWEEP*t/100;
+    const [x1,y1]=polar(R+13,deg),[x2,y2]=polar(R+20,deg);
+    const ln=document.createElementNS('http://www.w3.org/2000/svg','line');
+    ln.setAttribute('x1',x1);ln.setAttribute('y1',y1);ln.setAttribute('x2',x2);ln.setAttribute('y2',y2);
+    ln.setAttribute('stroke','rgba(255,255,255,.3)');ln.setAttribute('stroke-width','2');tg.appendChild(ln);
+    const [lx,ly]=polar(R+34,deg);
+    const tx=document.createElementNS('http://www.w3.org/2000/svg','text');
+    tx.setAttribute('x',lx);tx.setAttribute('y',ly+4);tx.setAttribute('text-anchor','middle');
+    tx.setAttribute('fill','#4E5F84');tx.setAttribute('font-size','11');
+    tx.setAttribute('font-family',"'IBM Plex Mono',monospace");tx.textContent=t;tg.appendChild(tx);
+  });
+  const needle=document.getElementById('needleG');
+  const num=document.getElementById('num');
+  if(reduce){needle.style.transform=`rotate(${valDeg}deg)`;num.textContent=pct.toFixed(1);return;}
+  const len=fill.getTotalLength();
+  fill.style.strokeDasharray=len; fill.style.strokeDashoffset=len; fill.getBoundingClientRect();
+  fill.style.transition='stroke-dashoffset 1.5s cubic-bezier(.2,.8,.2,1)';
+  needle.style.transform=`rotate(${START}deg)`;
+  needle.style.transition='transform 1.5s cubic-bezier(.2,.8,.2,1)';
+  requestAnimationFrame(()=>{fill.style.strokeDashoffset='0';needle.style.transform=`rotate(${valDeg}deg)`;});
+  const dur=1500,t0=performance.now();
+  (function tk(t){const k=Math.min(1,(t-t0)/dur),e=1-Math.pow(1-k,3);
+    num.textContent=(pct*e).toFixed(1);if(k<1)requestAnimationFrame(tk);})(t0);
+})();
+
+/* ---- concentration ring orbit dots ---- */
+(function(){
+  const host=document.getElementById('orbitDots'), n=8, R=115, cx=115, cy=115, live=0;
+  for(let i=0;i<n;i++){
+    const a=(i/n)*2*Math.PI - Math.PI/2;
+    const d=document.createElement('div');
+    d.className='od'+(i===live?' live':'');
+    d.style.left=(cx+Math.cos(a)*R)+'px';
+    d.style.top=(cy+Math.sin(a)*R)+'px';
+    host.appendChild(d);
+  }
+})();
+
+/* ---- pnl bars with labels ---- */
+(function(){
+  const data=[
+    {d:'06-25',v:-1.10},{d:'06-26',v:2.10},{d:'06-27',v:-3.40},
+    {d:'06-28',v:0.30},{d:'06-29',v:2.39}
+  ];
+  const W=420,zero=120,pad=30,plot=W-pad*2,step=plot/data.length,bw=step*0.46;
+  const maxAbs=Math.max(...data.map(d=>Math.abs(d.v))),scale=86/maxAbs;
+  const g=document.getElementById('barsG'); const NS='http://www.w3.org/2000/svg';
+  data.forEach((d,i)=>{
+    const cx=pad+step*i+step/2, up=d.v>=0, h=Math.abs(d.v)*scale, y=up?zero-h:zero;
+    const r=document.createElementNS(NS,'rect');
+    r.setAttribute('x',cx-bw/2);r.setAttribute('width',bw);r.setAttribute('rx',5);
+    r.setAttribute('fill',up?'url(#bUp)':'url(#bDown)');
+    r.setAttribute('y',zero);r.setAttribute('height',0);
+    r.style.filter=`drop-shadow(0 0 6px ${up?'rgba(69,196,138,.5)':'rgba(240,85,104,.5)'})`;
+    g.appendChild(r);
+    if(reduce){r.setAttribute('y',y);r.setAttribute('height',h);}
+    else{r.style.transition=`y .8s cubic-bezier(.2,.8,.2,1) ${i*.08}s, height .8s cubic-bezier(.2,.8,.2,1) ${i*.08}s`;
+      requestAnimationFrame(()=>{r.setAttribute('y',y);r.setAttribute('height',h);});}
+    const val=document.createElementNS(NS,'text');
+    val.setAttribute('x',cx);val.setAttribute('y',up?y-9:y+h+18);val.setAttribute('text-anchor','middle');
+    val.setAttribute('font-family',"'IBM Plex Mono',monospace");
+    val.setAttribute('font-size','13');val.setAttribute('font-weight','600');
+    val.setAttribute('fill',up?'#45C48A':'#F05568');
+    val.textContent=(d.v>=0?'+':'−')+'$'+Math.abs(d.v).toFixed(2);
+    val.style.opacity=reduce?1:0;
+    if(!reduce){val.style.transition=`opacity .4s ease ${.5+i*.08}s`;
+      requestAnimationFrame(()=>val.style.opacity=1);}
+    g.appendChild(val);
+    const day=document.createElementNS(NS,'text');
+    day.setAttribute('x',cx);day.setAttribute('y',232);day.setAttribute('text-anchor','middle');
+    day.setAttribute('font-family',"'IBM Plex Mono',monospace");day.setAttribute('font-size','10');
+    day.setAttribute('fill','#4E5F84');day.textContent=d.d;g.appendChild(day);
+  });
+})();
+</script>
+</body>
+</html>
